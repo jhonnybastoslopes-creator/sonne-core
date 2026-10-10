@@ -1,6 +1,6 @@
 {
   "name": "sonne-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Toolkit profissional para bots de WhatsApp com Baileys: anti-ban realista, botoes nativos, agendador, filtros e persistencia SQLite. Modular, testado e pronto para producao.",
   "main": "src/index.js",
   "types": "types/index.d.ts",
@@ -41,7 +41,7 @@
     "LICENSE"
   ],
   "peerDependencies": {
-    "@whiskeysockets/baileys": ">=6"
+    "@whiskeysockets/baileys": ">=6.0.0-0"
   },
   "peerDependenciesMeta": {
     "@whiskeysockets/baileys": {

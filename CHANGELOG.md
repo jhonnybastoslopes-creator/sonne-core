@@ -4,7 +4,13 @@ Todas as mudanças relevantes deste pacote são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [0.2.0] - não publicado
+## [0.2.1]
+
+### Corrigido
+- Peer dependency do Baileys aceita pré-releases (`>=6.0.0-0`), compatível com
+  versões RC como `7.0.0-rc.x`.
+
+## [0.2.0]
 
 ### Adicionado
 - Módulo `AntiBan` (classe): fila serial, jitter, "digitando...", limites por
