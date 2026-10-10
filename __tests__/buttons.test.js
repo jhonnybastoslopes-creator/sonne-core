@@ -69,4 +69,38 @@ describe('Buttons - enviar (modo texto, sem baileys)', () => {
     expect(ok).toBe(true)
     expect(enviados[0].text).toContain('/b')
   })
+
+  test('em CANAL (newsletter) força texto mesmo pedindo modo nativo', async () => {
+    const enviados = []
+    const socket = {
+      user: { id: 'bot@s.whatsapp.net' },
+      // relayMessage NAO deve ser chamado em canal (seria o caminho nativo)
+      relayMessage: async () => { throw new Error('nativo nao deveria ser usado em canal') },
+      sendMessage: async (jid, content) => { enviados.push(content); return { key: { id: 'c' } } }
+    }
+    const ok = await Buttons.enviar(socket, '12345@newsletter', null, {
+      texto: 'Menu do canal',
+      botoes: [Buttons.quickReply('Opcao', '/op')],
+      modo: 'nativo'
+    })
+    expect(ok).toBe(true)
+    expect(enviados).toHaveLength(1)
+    expect(enviados[0].text).toContain('/op') // virou menu de texto
+  })
+
+  test('enviarCapturandoKey em canal manda texto puro e retorna key', async () => {
+    const enviados = []
+    const socket = {
+      user: { id: 'bot@s.whatsapp.net' },
+      relayMessage: async () => { throw new Error('nao deveria usar nativo em canal') },
+      sendMessage: async (jid, content) => { enviados.push(content); return { key: { id: 'k' } } }
+    }
+    const msg = await Buttons.enviarCapturandoKey(socket, '999@newsletter', {
+      texto: 'Oferta do canal',
+      botoes: [Buttons.urlButton('Ver', 'https://ex.com')]
+    })
+    expect(msg).not.toBeNull()
+    expect(msg.key.id).toBe('k')
+    expect(enviados[0].text).toBe('Oferta do canal')
+  })
 })

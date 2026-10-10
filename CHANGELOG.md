@@ -4,6 +4,13 @@ Todas as mudanças relevantes deste pacote são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.3.1]
+
+### Corrigido
+- `Buttons.enviar` e `Buttons.enviarCapturandoKey` agora detectam canais
+  (`@newsletter`) e enviam em texto automaticamente. Canais não renderizam
+  botões interativos (o WhatsApp mostrava "sua versão não é compatível").
+
 ## [0.3.0]
 
 ### Adicionado

@@ -82,9 +82,15 @@ async function enviar(socket, from, info, opcoes = {}) {
     rodape = 'sonne-core',
     titulo = '',
     botoes = [],
-    imagem = null,
-    modo = 'nativo'
+    imagem = null
   } = opcoes
+  let modo = opcoes.modo || 'nativo'
+
+  // Canais (newsletter) NAO renderizam botoes interativos: o WhatsApp mostra
+  // "sua versao nao e compativel". Forcamos o modo texto nesses destinos.
+  if (typeof from === 'string' && from.endsWith('@newsletter')) {
+    modo = 'texto'
+  }
 
   if (modo === 'nativo') {
     const ok = await enviarNativo(socket, from, { texto, rodape, titulo, botoes }).catch(() => false)
@@ -159,6 +165,11 @@ async function enviarNativo(socket, from, { texto, rodape, titulo, botoes }) {
  * @returns {object|null}
  */
 async function enviarCapturandoKey(socket, from, { texto, rodape = 'sonne-core', titulo = '', botoes = [] }) {
+  // Canais (newsletter) nao renderizam botoes: envia texto puro e retorna a key.
+  if (typeof from === 'string' && from.endsWith('@newsletter')) {
+    try { return await socket.sendMessage(from, { text: texto }) } catch (e) { return null }
+  }
+
   const baileys = getBaileys()
   try {
     if (!baileys) throw new Error('baileys indisponivel')
