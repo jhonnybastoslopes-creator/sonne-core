@@ -150,3 +150,55 @@ export class Scheduler {
   stop(): this
   tick(date?: Date): Promise<void>
 }
+
+// ===== SessionManager =====
+export interface SessionManagerOpcoes {
+  ttl?: number
+}
+
+export class SessionManager {
+  constructor(opcoes?: SessionManagerOpcoes)
+  registrarHandler(acao: string, handler: (ctx: any) => void | Promise<void>): this
+  iniciar(jid: string, acao: string, dados?: any): this
+  obter(jid: string): { acao: string; dados: any; expira: number } | null
+  encerrar(jid: string): void
+  temSessao(jid: string): boolean
+  processar(jid: string, valor: string, ctx?: any): Promise<boolean>
+  podar(): void
+  stats(): { sessoesAtivas: number; handlers: number }
+}
+
+// ===== GroupCache =====
+export interface GroupCacheOpcoes {
+  ttl?: number
+  maxEntradas?: number
+}
+
+export class GroupCache {
+  constructor(opcoes?: GroupCacheOpcoes)
+  configurar(opcoes: GroupCacheOpcoes): this
+  get(socket: any, jid: string): Promise<any>
+  set(jid: string, data: any): void
+  invalidar(jid: string): void
+  podarExpirados(): number
+  limpar(): void
+  stats(): { entradas: number; hits: number; misses: number; taxaAcerto: string }
+}
+
+// ===== Cleanup =====
+export interface CleanupOpcoes {
+  tempDir?: string
+  intervaloMs?: number
+  maxAgeMs?: number
+  maxArquivos?: number
+  ignorar?: string[]
+  logDirs?: string[]
+  maxLogBytes?: number
+}
+
+export class Cleanup {
+  constructor(opcoes?: CleanupOpcoes)
+  start(): this
+  stop(): this
+  executar(): { removidos: number; bytesLiberados: number }
+}

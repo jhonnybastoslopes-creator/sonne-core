@@ -4,6 +4,18 @@ Todas as mudanças relevantes deste pacote são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.3.0]
+
+### Adicionado
+- Módulo `SessionManager` (classe): sessões conversacionais "pergunta → aguarda
+  resposta", ideal para configuração guiada por botões. Zero dependências.
+- Módulo `GroupCache` (classe): cache em memória de `groupMetadata` do Baileys
+  com TTL, poda por limite e fallback para cache antigo em caso de falha.
+- Módulo `Cleanup` (classe): limpeza automática de temporários e truncamento de
+  logs grandes numa VPS, totalmente parametrizável.
+- Tipos TypeScript dos 3 módulos novos.
+- Agora são 62 testes.
+
 ## [0.2.1]
 
 ### Corrigido

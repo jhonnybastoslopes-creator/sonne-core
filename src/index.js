@@ -22,6 +22,9 @@ const RateLimiter = require('./rateLimiter.js')
 const Storage = require('./storage.js')
 const DB = require('./db.js')
 const Scheduler = require('./scheduler.js')
+const SessionManager = require('./sessionManager.js')
+const GroupCache = require('./groupCache.js')
+const Cleanup = require('./cleanup.js')
 
 module.exports = {
   // Infra
@@ -30,10 +33,13 @@ module.exports = {
   log,
 
   // Módulos
-  Buttons,     // objeto de funções (quickReply, enviar, ...)
-  AntiBan,     // classe
-  RateLimiter, // classe
-  Storage,     // classe
-  DB,          // classe
-  Scheduler    // classe
+  Buttons,        // objeto de funções (quickReply, enviar, ...)
+  AntiBan,        // classe
+  RateLimiter,    // classe
+  Storage,        // classe
+  DB,             // classe
+  Scheduler,      // classe
+  SessionManager, // classe
+  GroupCache,     // classe
+  Cleanup         // classe
 }

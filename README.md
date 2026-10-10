@@ -52,6 +52,9 @@ Todos os módulos (exceto `Buttons`) são **classes** — instancie com `new`.
 | `Storage` | JSON com escrita atômica, backup `.bak`, cache e lock por arquivo |
 | `DB` | Persistência SQLite nativa (node:sqlite) chave-valor |
 | `Scheduler` | Agendamento por horários HH:MM |
+| `SessionManager` | Sessões conversacionais (pergunta → aguarda resposta) |
+| `GroupCache` | Cache de `groupMetadata` do Baileys com TTL |
+| `Cleanup` | Limpeza automática de temporários/logs numa VPS |
 
 ### AntiBan
 
