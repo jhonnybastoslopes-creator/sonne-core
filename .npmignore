@@ -7,3 +7,4 @@ CONTRIBUTING.md
 coverage/
 .gitignore
 .npmignore
+package-lock.json
