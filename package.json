@@ -1,0 +1,50 @@
+{
+  "name": "sonne-core",
+  "version": "0.1.0",
+  "description": "Toolkit profissional para bots de WhatsApp com Baileys: anti-ban realista, botoes nativos, agendador, filtros e persistencia SQLite. Modular, testado e pronto para producao.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "whatsapp",
+    "baileys",
+    "bot",
+    "anti-ban",
+    "antiban",
+    "buttons",
+    "native-flow",
+    "scheduler",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhonnybastoslopes-creator/sonne-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jhonnybastoslopes-creator/sonne-core/issues"
+  },
+  "homepage": "https://github.com/jhonnybastoslopes-creator/sonne-core#readme",
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@whiskeysockets/baileys": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "@whiskeysockets/baileys": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
