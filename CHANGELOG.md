@@ -4,10 +4,27 @@ Todas as mudanças relevantes deste pacote são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [0.1.0] - não publicado
+## [0.2.0] - não publicado
+
+### Adicionado
+- Módulo `AntiBan` (classe): fila serial, jitter, "digitando...", limites por
+  janela (minuto/hora/dia), anti-flood por destino, pausa noturna, warm-up,
+  cooldown por erros e spintax. Config, persistência (`store`) e `onCooldown`
+  injetáveis.
+- Módulo `RateLimiter` (classe): anti-flood de comandos por usuário.
+- Módulo `Storage` (classe): JSON com escrita atômica, backup `.bak`, cache por
+  mtime e lock por arquivo (incl. `updateJSONSafe` contra lost update).
+- Módulo `DB` (classe): persistência SQLite nativa (node:sqlite) chave-valor,
+  com meta, poda por idade, compactação e importação.
+- Módulo `Scheduler` (classe): agendamento genérico por horários HH:MM + `onTick`.
+- Definições de tipos TypeScript (`types/index.d.ts`).
+- `CONTRIBUTING.md`.
+- Suite com 44 testes.
+
+## [0.1.0]
 
 ### Adicionado
 - Estrutura inicial do pacote (`src/`, testes, CI, licença MIT).
 - Módulo `Buttons`: botões nativos (native_flow) do Baileys 7+ com fallback de
-  texto automático e API desacoplada (sem dependência de configManager).
+  texto automático e API desacoplada.
 - `setLogger` / `enableConsoleLogger`: logger injetável e silencioso por padrão.

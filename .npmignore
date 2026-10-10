@@ -1,7 +1,9 @@
 __tests__/
 .github/
+examples/
 jest.config.js
 CHANGELOG.md
+CONTRIBUTING.md
 coverage/
 .gitignore
 .npmignore
