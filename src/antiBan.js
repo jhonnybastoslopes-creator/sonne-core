@@ -80,6 +80,14 @@ class AntiBan {
     this.errosSeguidos = 0
     this.forcarLimites = false
 
+    // ===== MODO ADAPTATIVO =====
+    // Ajusta o ritmo sozinho: sucesso sobe a "saude" (acelera ate 1.0),
+    // erro/rate-limit derruba (desacelera ate 0.3 e pode pausar). Assim o bot
+    // posta o MAXIMO seguro e recua no primeiro sinal de risco.
+    this._adaptativo = opcoes.adaptativo !== false // ligado por padrao
+    this.saude = typeof opcoes.saudeInicial === 'number' ? opcoes.saudeInicial : 70 // 0-100
+    this.enviosConsecutivosOk = 0
+
     this._carregarEstado()
   }
 
@@ -116,6 +124,8 @@ class AntiBan {
       const mesmoDia = new Date(st.diaData).toDateString() === new Date().toDateString()
       if (mesmoDia) this.contadores.dia.count = st.diaContador
     }
+    // Restaura a saude adaptativa (continua de onde parou apos reinicio).
+    if (typeof st.saude === 'number') this.saude = Math.max(0, Math.min(100, st.saude))
   }
 
   _salvarEstado() {
@@ -124,7 +134,8 @@ class AntiBan {
       this._store.write({
         inicioOperacao: this.inicioOperacao,
         diaContador: this.contadores.dia.count,
-        diaData: new Date().toISOString()
+        diaData: new Date().toISOString(),
+        saude: Math.round(this.saude)
       })
     } catch (e) {}
   }
@@ -140,6 +151,45 @@ class AntiBan {
     if (d <= 3) return 0.5
     if (d <= 6) return 0.75
     return 1
+  }
+
+  /**
+   * Fator de VELOCIDADE adaptativo (multiplica os delays). Deriva da "saude":
+   *   saude 100 -> 0.7 (envia 30% mais rapido que o perfil)
+   *   saude 70  -> 1.0 (ritmo normal do perfil)
+   *   saude 30  -> 1.8 (bem mais devagar)
+   *   saude <15 -> alem de lento, pode pausar (ver _ajustarPosEnvio)
+   * Retorna 1 quando o modo adaptativo esta desligado.
+   */
+  fatorAdaptativoDelay() {
+    if (!this._adaptativo) return 1
+    const s = Math.max(0, Math.min(100, this.saude))
+    // Interpola linear: saude 100 => 0.7 ; saude 0 => 2.2
+    return 2.2 - (s / 100) * 1.5
+  }
+
+  /** Multiplicador para os LIMITES por janela conforme a saude (menos saude = menos limite). */
+  fatorAdaptativoLimite() {
+    if (!this._adaptativo) return 1
+    const s = Math.max(0, Math.min(100, this.saude))
+    if (s >= 80) return 1
+    if (s >= 50) return 0.8
+    if (s >= 25) return 0.5
+    return 0.3
+  }
+
+  /** Chamado apos um envio OK: sobe a saude gradualmente (acelera com cautela). */
+  _registrarSucessoAdaptativo() {
+    this.enviosConsecutivosOk++
+    // Sobe mais rapido no comeco de uma sequencia boa, depois estabiliza.
+    const ganho = this.enviosConsecutivosOk >= 10 ? 3 : 1.5
+    this.saude = Math.min(100, this.saude + ganho)
+  }
+
+  /** Chamado apos erro/suspeita: derruba a saude (desacelera forte). */
+  _registrarFalhaAdaptativa(grave = false) {
+    this.enviosConsecutivosOk = 0
+    this.saude = Math.max(0, this.saude - (grave ? 40 : 15))
   }
 
   setSocket(socket) { this.socket = socket; return this }
@@ -177,9 +227,11 @@ class AntiBan {
     }
 
     if (!this.emTeste || this.forcarLimites) {
-      const maxMinuto = Math.max(1, Math.floor(this._cfg('maxPorMinuto', 8) * fator))
-      const maxHora = Math.max(1, Math.floor(this._cfg('maxPorHora', 120) * fator))
-      const maxDia = Math.max(1, Math.floor(this._cfg('maxPorDia', 800) * fator))
+      // fator = warm-up (dias de operacao) * adaptativo (saude atual)
+      const fatorTotal = fator * this.fatorAdaptativoLimite()
+      const maxMinuto = Math.max(1, Math.floor(this._cfg('maxPorMinuto', 8) * fatorTotal))
+      const maxHora = Math.max(1, Math.floor(this._cfg('maxPorHora', 120) * fatorTotal))
+      const maxDia = Math.max(1, Math.floor(this._cfg('maxPorDia', 800) * fatorTotal))
 
       if (this.contadores.minuto.count >= maxMinuto) {
         return { ok: false, motivo: 'limite/minuto', esperar: this.contadores.minuto.reset - agora }
@@ -215,7 +267,9 @@ class AntiBan {
     if (this.emTeste) return 5
     const base = this._cfg('delayBaseMs', 4000)
     const jitter = this._cfg('delayJitterMs', 4000)
-    return base + Math.floor(Math.random() * jitter)
+    const bruto = base + Math.floor(Math.random() * jitter)
+    // Modo adaptativo: acelera (saude alta) ou desacelera (saude baixa).
+    return Math.round(bruto * this.fatorAdaptativoDelay())
   }
 
   _sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
@@ -306,6 +360,7 @@ class AntiBan {
       this.contadores.dia.count++
       this.ultimoEnvioDestino.set(item.destino, Date.now())
       this.errosSeguidos = 0
+      this._registrarSucessoAdaptativo() // envio OK -> sobe a saude (acelera)
       this._salvarEstado()
       return { sucesso: true }
     } catch (err) {
@@ -321,32 +376,41 @@ class AntiBan {
       msg.includes('429') || msg.includes('forbidden') || msg.includes('spam') ||
       msg.includes('blocked') || this.errosSeguidos >= 3
 
+    // Modo adaptativo: derruba a saude (desacelera). Suspeita = queda grave.
+    this._registrarFalhaAdaptativa(suspeito)
+
     if (suspeito) {
-      const cooldownMin = this._cfg('cooldownErroMin', 15)
+      // Cooldown adaptativo: quanto menor a saude, maior a pausa.
+      const baseMin = this._cfg('cooldownErroMin', 15)
+      const cooldownMin = this.saude < 15 ? baseMin * 2 : baseMin
       this.cooldownAte = Date.now() + cooldownMin * 60000
-      log.error(`AntiBan: comportamento suspeito detectado! Cooldown de ${cooldownMin}min ativado.`)
+      log.error(`AntiBan: comportamento suspeito! Saude=${Math.round(this.saude)}. Cooldown de ${cooldownMin}min.`)
       if (this._onCooldown) {
-        try { this._onCooldown({ minutos: cooldownMin, erro: err.message }) } catch (e) {}
+        try { this._onCooldown({ minutos: cooldownMin, erro: err.message, saude: Math.round(this.saude) }) } catch (e) {}
       }
     }
   }
 
   status() {
     this._resetarContadores()
-    const fator = this.fatorWarmup()
+    const fator = this.fatorWarmup() * this.fatorAdaptativoLimite()
     const delayBase = this._cfg('delayBaseMs', 4000)
     const delayJitter = this._cfg('delayJitterMs', 4000)
-    const delayMedioS = Math.round((delayBase + delayJitter / 2) / 1000)
+    const delayMedioS = Math.round(((delayBase + delayJitter / 2) * this.fatorAdaptativoDelay()) / 1000)
+    const estadoSaude = this.saude >= 70 ? '🟢 ótima' : (this.saude >= 40 ? '🟡 cautela' : '🔴 recuando')
     return {
       perfil: this.perfilAtual(),
+      adaptativo: this._adaptativo,
+      saude: `${Math.round(this.saude)}/100 (${estadoSaude})`,
       diasOperando: this.diasOperando(),
-      warmupFator: `${Math.round(fator * 100)}%`,
+      warmupFator: `${Math.round(this.fatorWarmup() * 100)}%`,
+      ritmo: this.fatorAdaptativoDelay() < 1 ? 'acelerado' : (this.fatorAdaptativoDelay() > 1.3 ? 'reduzido' : 'normal'),
       filaPendente: this.fila.length,
       delayMedioS,
       destinosRastreados: this.ultimoEnvioDestino.size,
-      enviosMinuto: `${this.contadores.minuto.count}/${Math.floor(this._cfg('maxPorMinuto', 8) * fator)}`,
-      enviosHora: `${this.contadores.hora.count}/${Math.floor(this._cfg('maxPorHora', 120) * fator)}`,
-      enviosDia: `${this.contadores.dia.count}/${Math.floor(this._cfg('maxPorDia', 800) * fator)}`,
+      enviosMinuto: `${this.contadores.minuto.count}/${Math.max(1, Math.floor(this._cfg('maxPorMinuto', 8) * fator))}`,
+      enviosHora: `${this.contadores.hora.count}/${Math.max(1, Math.floor(this._cfg('maxPorHora', 120) * fator))}`,
+      enviosDia: `${this.contadores.dia.count}/${Math.max(1, Math.floor(this._cfg('maxPorDia', 800) * fator))}`,
       emCooldown: Date.now() < this.cooldownAte,
       cooldownRestanteMin: Date.now() < this.cooldownAte ? Math.ceil((this.cooldownAte - Date.now()) / 60000) : 0
     }

@@ -66,12 +66,15 @@ export interface AntiBanOpcoes {
   perfil?: 'seguro' | 'equilibrado' | 'turbo'
   config?: Partial<AntiBanPerfil> & Record<string, any>
   store?: AntiBanStore
-  onCooldown?: (info: { minutos: number; erro: string }) => void
+  onCooldown?: (info: { minutos: number; erro: string; saude?: number }) => void
   testMode?: boolean
+  adaptativo?: boolean
+  saudeInicial?: number
 }
 
 export class AntiBan {
   static readonly PERFIS: Record<'seguro' | 'equilibrado' | 'turbo', AntiBanPerfil>
+  saude: number
   constructor(opcoes?: AntiBanOpcoes)
   setSocket(socket: any): this
   set(chave: string, valor: any): this
@@ -83,6 +86,8 @@ export class AntiBan {
   variarTexto(texto: string): string
   diasOperando(): number
   fatorWarmup(): number
+  fatorAdaptativoDelay(): number
+  fatorAdaptativoLimite(): number
   limparFila(): void
   resetarEstado(): void
 }

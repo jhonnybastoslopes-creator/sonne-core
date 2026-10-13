@@ -104,3 +104,67 @@ describe('AntiBan - cooldown e estado', () => {
     expect(s).toHaveProperty('emCooldown')
   })
 })
+
+describe('AntiBan - modo adaptativo', () => {
+  function socketOk() {
+    return { user: { id: 'bot' }, sendMessage: async () => ({ key: { id: 'm' } }), sendPresenceUpdate: async () => {} }
+  }
+  function socketRateLimit() {
+    return { user: { id: 'bot' }, sendMessage: async () => { throw new Error('rate limit exceeded') }, sendPresenceUpdate: async () => {} }
+  }
+
+  test('envio OK sobe a saude (acelera)', async () => {
+    const ab = new AntiBan({ testMode: true, saudeInicial: 50 })
+    ab.setSocket(socketOk())
+    const antes = ab.saude
+    await ab.enfileirar('a@s.whatsapp.net', { text: 'x' })
+    expect(ab.saude).toBeGreaterThan(antes)
+  })
+
+  test('rate limit derruba a saude (desacelera) de forma grave', async () => {
+    const ab = new AntiBan({ testMode: true, saudeInicial: 80 })
+    ab.setSocket(socketRateLimit())
+    await ab.enfileirar('a@s.whatsapp.net', { text: 'x' })
+    expect(ab.saude).toBeLessThan(80)
+  })
+
+  test('fatorAdaptativoDelay: saude alta acelera, saude baixa desacelera', () => {
+    const alto = new AntiBan({ testMode: true, saudeInicial: 100 })
+    const baixo = new AntiBan({ testMode: true, saudeInicial: 10 })
+    expect(alto.fatorAdaptativoDelay()).toBeLessThan(1)   // mais rapido
+    expect(baixo.fatorAdaptativoDelay()).toBeGreaterThan(1.5) // bem mais lento
+  })
+
+  test('fatorAdaptativoLimite reduz com saude baixa', () => {
+    const alto = new AntiBan({ testMode: true, saudeInicial: 90 })
+    const baixo = new AntiBan({ testMode: true, saudeInicial: 10 })
+    expect(alto.fatorAdaptativoLimite()).toBe(1)
+    expect(baixo.fatorAdaptativoLimite()).toBeLessThan(0.5)
+  })
+
+  test('adaptativo pode ser desligado (fatores = 1)', () => {
+    const ab = new AntiBan({ testMode: true, adaptativo: false, saudeInicial: 10 })
+    expect(ab.fatorAdaptativoDelay()).toBe(1)
+    expect(ab.fatorAdaptativoLimite()).toBe(1)
+  })
+
+  test('status expõe saude e ritmo', () => {
+    const ab = new AntiBan({ testMode: true, saudeInicial: 90 })
+    const s = ab.status()
+    expect(s).toHaveProperty('saude')
+    expect(s).toHaveProperty('ritmo')
+    expect(s.adaptativo).toBe(true)
+  })
+
+  test('saude é persistida no store', async () => {
+    let salvo = {}
+    const store = { read: () => salvo, write: (o) => { salvo = o } }
+    const ab = new AntiBan({ testMode: true, saudeInicial: 60, store })
+    ab.setSocket(socketOk())
+    await ab.enfileirar('a@s.whatsapp.net', { text: 'x' })
+    expect(typeof salvo.saude).toBe('number')
+    // nova instancia restaura a saude salva
+    const ab2 = new AntiBan({ testMode: true, store })
+    expect(ab2.saude).toBe(salvo.saude)
+  })
+})

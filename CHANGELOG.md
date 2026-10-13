@@ -4,6 +4,16 @@ Todas as mudanças relevantes deste pacote são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.4.0]
+
+### Adicionado
+- `AntiBan` agora é **ADAPTATIVO**: mantém uma "saúde" (0-100) que sobe a cada
+  envio bem-sucedido (acelera, aumenta limites) e cai a cada erro/rate-limit
+  (desacelera, reduz limites e, em casos graves, pausa com cooldown maior).
+  Maximiza o volume de envio sem tomar ban, recuando sozinho ao primeiro sinal
+  de risco. Pode ser desligado com `{ adaptativo: false }`. A saúde é persistida.
+- `status()` do AntiBan agora reporta `saude`, `ritmo` e `adaptativo`.
+
 ## [0.3.1]
 
 ### Corrigido
